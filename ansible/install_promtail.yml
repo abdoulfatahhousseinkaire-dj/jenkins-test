@@ -58,12 +58,19 @@
           Start-Sleep -Seconds 2
         }
 
+#    - name: Installer Promtail comme service Windows
+#      win_shell: |
+#        sc.exe create Promtail `
+#          binPath= "\"C:\promtail\promtail-windows-amd64.exe\" -config.file=\"C:\promtail\promtail-config.yml\"" `
+#          start= auto `
+#          DisplayName= "Promtail Log Agent"
+
     - name: Installer Promtail comme service Windows
       win_shell: |
-        sc.exe create Promtail `
-          binPath= "\"C:\promtail\promtail-windows-amd64.exe\" -config.file=\"C:\promtail\promtail-config.yml\"" `
-          start= auto `
-          DisplayName= "Promtail Log Agent"
+        New-Service -Name "Promtail" `
+          -BinaryPathName "C:\promtail\promtail-windows-amd64.exe -config.file=C:\promtail\promtail-config.yml" `
+          -DisplayName "Promtail Log Agent" `
+          -StartupType Automatic
 
     - name: Démarrer Promtail
       win_shell: |
