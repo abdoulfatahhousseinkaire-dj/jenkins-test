@@ -70,5 +70,13 @@ stage('Deploy') {
     }
 }
 
+        stage('Install Promtail') {
+            steps {
+                sh """
+                    ansible-playbook -i ansible/inventory.ini ansible/install_promtail.yml
+                """
+            }
+        }
+
     }
 }
