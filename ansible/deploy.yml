@@ -18,4 +18,13 @@
 
     - name: Start the JAR application
       win_shell: |
-        Start-Process java -ArgumentList '-jar C:\apps\monapp\app.jar' -RedirectStandardOutput C:\apps\monapp\out.log -RedirectStandardError C:\apps\monapp\err.log
+        $action = New-ScheduledTaskAction -Execute 'java' -Argument '-jar C:\deploy\jenkins-0.0.1-SNAPSHOT.jar'
+        $trigger = New-ScheduledTaskTrigger -AtStartup
+        $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 0)
+        Register-ScheduledTask -TaskName "SpringApp" -Action $action -Trigger $trigger -Settings $settings -Force
+        Start-ScheduledTask -TaskName "SpringApp"
+      ignore_errors: yes
+
+#    - name: Start the JAR application
+#      win_shell: |
+#        Start-Process java -ArgumentList '-jar C:\apps\monapp\app.jar' -RedirectStandardOutput C:\apps\monapp\out.log -RedirectStandardError C:\apps\monapp\err.log
