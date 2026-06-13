@@ -1,34 +1,81 @@
-- name: Supprimer l'ancien service si existant
-  win_shell: |
-    $svc = Get-Service -Name "Promtail" -ErrorAction SilentlyContinue
-    if ($svc) {
-      Stop-Service -Name "Promtail" -Force -ErrorAction SilentlyContinue
-      sc.exe delete Promtail
-      Start-Sleep -Seconds 2
-    }
+---
+- name: Installer Promtail sur Windows
+  hosts: windows
+  vars:
+    promtail_version: "3.4.2"
+    loki_server: "192.168.1.19"
+    app_log_path: 'C:\deploy\app.log'
+    promtail_dir: 'C:\promtail'
 
-- name: Installer Promtail comme service Windows
-  win_shell: |
-    sc.exe create Promtail `
-      binPath= "\"C:\promtail\promtail-windows-amd64.exe\" -config.file=\"C:\promtail\promtail-config.yml\"" `
-      start= auto `
-      DisplayName= "Promtail Log Agent"
+  tasks:
 
-- name: Configurer la description du service
-  win_shell: |
-    sc.exe description Promtail "Agent Promtail - envoi logs vers Loki"
+    - name: Créer le répertoire Promtail
+      win_file:
+        path: "{{ promtail_dir }}"
+        state: directory
 
-- name: Démarrer Promtail
-  win_shell: |
-    Start-Sleep -Seconds 1
-    Start-Service -Name "Promtail"
+    - name: Télécharger Promtail
+      win_get_url:
+        url: "https://github.com/grafana/loki/releases/download/v{{ promtail_version }}/promtail-windows-amd64.exe.zip"
+        dest: '{{ promtail_dir }}\promtail.zip'
 
-- name: Vérifier que Promtail tourne
-  win_shell: |
-    $svc = Get-Service -Name "Promtail"
-    Write-Output $svc.Status
-  register: svc_status
+    - name: Décompresser Promtail
+      win_unzip:
+        src: '{{ promtail_dir }}\promtail.zip'
+        dest: "{{ promtail_dir }}"
 
-- name: Afficher le statut
-  debug:
-    msg: "Promtail status : {{ svc_status.stdout }}"
+    - name: Déployer la configuration Promtail
+      win_copy:
+        dest: '{{ promtail_dir }}\promtail-config.yml'
+        content: |
+          server:
+            http_listen_port: 9080
+            grpc_listen_port: 0
+
+          positions:
+            filename: C:\promtail\positions.yaml
+
+          clients:
+            - url: http://{{ loki_server }}:3100/loki/api/v1/push
+
+          scrape_configs:
+            - job_name: spring_app
+              static_configs:
+                - targets:
+                    - localhost
+                  labels:
+                    job: spring-boot
+                    host: "{{ inventory_hostname }}"
+                    app: jenkins-demo
+                    __path__: '{{ app_log_path }}'
+
+    - name: Supprimer l'ancien service si existant
+      win_shell: |
+        $svc = Get-Service -Name "Promtail" -ErrorAction SilentlyContinue
+        if ($svc) {
+          Stop-Service -Name "Promtail" -Force -ErrorAction SilentlyContinue
+          sc.exe delete Promtail
+          Start-Sleep -Seconds 2
+        }
+
+    - name: Installer Promtail comme service Windows
+      win_shell: |
+        sc.exe create Promtail `
+          binPath= "\"C:\promtail\promtail-windows-amd64.exe\" -config.file=\"C:\promtail\promtail-config.yml\"" `
+          start= auto `
+          DisplayName= "Promtail Log Agent"
+
+    - name: Démarrer Promtail
+      win_shell: |
+        Start-Sleep -Seconds 1
+        Start-Service -Name "Promtail"
+
+    - name: Vérifier que Promtail tourne
+      win_shell: |
+        $svc = Get-Service -Name "Promtail"
+        Write-Output $svc.Status
+      register: svc_status
+
+    - name: Afficher le statut
+      debug:
+        msg: "Promtail status : {{ svc_status.stdout }}"
