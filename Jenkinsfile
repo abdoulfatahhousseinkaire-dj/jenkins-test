@@ -54,13 +54,21 @@ pipeline {
             }
         }
 
+        stage('Debug') {
+            steps {
+                sh 'pwd && find . -name "*.yml" -o -name "*.ini"'
+            }
+        }
+
+
         stage('Deploy') {
             steps {
                 sh """
-                    ansible-playbook -i inventory.ini deploy.yml \
-                    --extra-vars "jar_path=\$(pwd)/${APP_DIR}/target/*.jar"
+                    ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
+                    --extra-vars "jar_path=\$(pwd)/${APP_DIR}/target/jenkins-0.0.1-SNAPSHOT.jar"
                 """
             }
         }
+
     }
 }
