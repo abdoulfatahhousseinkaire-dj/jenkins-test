@@ -1,0 +1,21 @@
+- name: Deploy JAR to Windows target
+  hosts: windows
+  tasks:
+    - name: Stop existing app (optionnel)
+      win_shell: |
+        Get-Process -Name java -ErrorAction SilentlyContinue | Stop-Process -Force
+      ignore_errors: yes
+
+    - name: Create deploy directory
+      win_file:
+        path: C:\apps\monapp
+        state: directory
+
+    - name: Copy JAR to target
+      win_copy:
+        src: "{{ jar_path }}"
+        dest: C:\apps\monapp\app.jar
+
+    - name: Start the JAR application
+      win_shell: |
+        Start-Process java -ArgumentList '-jar C:\apps\monapp\app.jar' -RedirectStandardOutput C:\apps\monapp\out.log -RedirectStandardError C:\apps\monapp\err.log
