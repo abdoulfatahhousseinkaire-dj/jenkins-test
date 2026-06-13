@@ -9,6 +9,6 @@ public class Home {
 
     @GetMapping("/")
     public String hello() {
-        return "Bienvenue dans ton app avec le cicd jenkins";
+        return "Bienvenue dans ton app avec le cicd jenkins :) pipeline fonctionnel";
     }
 }
