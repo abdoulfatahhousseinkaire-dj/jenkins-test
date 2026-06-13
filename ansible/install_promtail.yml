@@ -49,33 +49,71 @@
                     app: jenkins-demo
                     __path__: '{{ app_log_path }}'
 
+#    - name: Supprimer l'ancien service si existant
+#      win_shell: |
+#        $svc = Get-Service -Name "Promtail" -ErrorAction SilentlyContinue
+#        if ($svc) {
+#          Stop-Service -Name "Promtail" -Force -ErrorAction SilentlyContinue
+#          sc.exe delete Promtail
+#          Start-Sleep -Seconds 2
+#        }
+
     - name: Supprimer l'ancien service si existant
       win_shell: |
         $svc = Get-Service -Name "Promtail" -ErrorAction SilentlyContinue
         if ($svc) {
-          Stop-Service -Name "Promtail" -Force -ErrorAction SilentlyContinue
-          sc.exe delete Promtail
+          if ($svc.Status -eq "Running") {
+            Stop-Service -Name "Promtail" -Force
+            Start-Sleep -Seconds 3
+          }
+          $result = sc.exe delete Promtail
           Start-Sleep -Seconds 2
+          Write-Output "Service supprime: $result"
+        } else {
+          Write-Output "Service inexistant, rien a supprimer"
         }
+      ignore_errors: yes
 
-#    - name: Installer Promtail comme service Windows
+
+    #    - name: Installer Promtail comme service Windows
 #      win_shell: |
 #        sc.exe create Promtail `
 #          binPath= "\"C:\promtail\promtail-windows-amd64.exe\" -config.file=\"C:\promtail\promtail-config.yml\"" `
 #          start= auto `
 #          DisplayName= "Promtail Log Agent"
 
+#    - name: Installer Promtail comme service Windows
+#      win_shell: |
+#        New-Service -Name "Promtail" `
+#          -BinaryPathName "C:\promtail\promtail-windows-amd64.exe -config.file=C:\promtail\promtail-config.yml" `
+#          -DisplayName "Promtail Log Agent" `
+#          -StartupType Automatic
+
     - name: Installer Promtail comme service Windows
-      win_shell: |
-        New-Service -Name "Promtail" `
-          -BinaryPathName "C:\promtail\promtail-windows-amd64.exe -config.file=C:\promtail\promtail-config.yml" `
-          -DisplayName "Promtail Log Agent" `
-          -StartupType Automatic
+      win_shell: >
+        sc.exe create Promtail
+        binPath= "C:\promtail\promtail-windows-amd64.exe -config.file=C:\promtail\promtail-config.yml"
+        start= auto
+        DisplayName= "Promtail Log Agent"
+      register: create_result
+
+    - name: Afficher résultat création
+      debug:
+        msg: "{{ create_result.stdout }}"
 
     - name: Démarrer Promtail
       win_shell: |
-        Start-Sleep -Seconds 1
+        Start-Sleep -Seconds 2
         Start-Service -Name "Promtail"
+        Start-Sleep -Seconds 3
+        $svc = Get-Service -Name "Promtail"
+        Write-Output "Status: $($svc.Status)"
+      register: start_result
+
+    - name: Afficher statut
+      debug:
+        msg: "{{ start_result.stdout }}"
+
 
     - name: Vérifier que Promtail tourne
       win_shell: |
