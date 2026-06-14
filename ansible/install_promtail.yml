@@ -8,7 +8,6 @@
     promtail_dir: 'C:\promtail'
 
   tasks:
-
     - name: Créer le répertoire Promtail
       win_file:
         path: "{{ promtail_dir }}"
