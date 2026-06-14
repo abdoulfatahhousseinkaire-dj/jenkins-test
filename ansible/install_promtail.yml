@@ -3,7 +3,7 @@
   hosts: windows
   vars:
     promtail_version: "3.4.2"
-    loki_server: "192.168.1.19"
+    loki_server: "192.168.137.210"
     app_log_path: 'C:\deploy\app.log'
     promtail_dir: 'C:\promtail'
 
